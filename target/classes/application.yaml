@@ -1,0 +1,53 @@
+server:
+    port: 7107
+spring:
+    application:
+        name: User
+    mvc:
+        pathmatch:
+            matching-strategy: ant_path_matcher #??swagger???????
+        async:
+            request-timeout: 5000 #???????????5?
+    #   static-path-pattern: /**  #????????????????
+    servlet:
+        multipart:
+            max-file-size: 25MB    #???????????2mb
+
+    #???
+    datasource:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.p6spy.engine.spy.P6SpyDriver
+        url: jdbc:p6spy:mysql://www.saigoumvp.work:3306/rjbf4?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=UTC&allowMultiQueries=true&allowPublicKeyRetrieval=true
+        username: rjbf4
+        password: 123456
+
+    #??
+    #  mail:
+    #    username: 2105584602@qq.com
+    #    password: zqgfsqmwnfnjbbfg
+    #    host: smtp.qq.com
+    mail:
+        host: smtp.qq.com
+        port: 25
+        username: 2105584602@qq.com
+        password: zqgfsqmwnfnjbbfg
+        default-encoding: UTF-8
+        properties:
+            mail:
+                smtp:
+                    socketFactory:
+                        class: javax.net.ssl.SSLSocketFactory
+                debug: true
+
+mybatis-plus:
+    global-config:
+        db-config:
+            #      logic-delete-field: flag # ????????????(since 3.3.0,????????????2)
+            logic-delete-value: 1     # ????
+            logic-not-delete-value: 0 # ??????
+    type-aliases-package: com.org.model
+
+#    configuration:
+#        log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+

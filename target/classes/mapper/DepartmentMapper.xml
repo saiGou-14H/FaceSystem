@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.org.mapper.DepartmentMapper">
+
+    <!-- start 查找所有资讯种类，并将他们映射到对应节点中 -->
+    <select id="searchDeptAndUser" resultMap="depts">
+        SELECT * FROM m_department WHERE  parentid ='' or parentid is NULL
+    </select>
+
+    <!--查找子部门-->
+    <select id="findDeptsByParentid" resultMap="depts">
+        SELECT * FROM m_department WHERE parentid = #{id}
+    </select>
+    <!--查找部门成员 注意用resultType-->
+    <select id="findDeptUsers" resultType="com.org.model.User">
+        select * from m_user mu
+                          JOIN m_user_department mud
+                               ON mud.USERID = mu.ID
+                          JOIN m_department md
+                               ON  md.ID = mud.DEPARTMENTID
+        WHERE md.ID = #{id}
+    </select>
+
+    <resultMap id="depts" type="com.org.model.Department">
+        <id column="ID" property="id"/>
+        <result column="PARTNAME" property="partname"/>
+        <result column="INTRODUCE" property="introduce"/>
+        <result column="PARENTID" property="parentid"/>
+        <collection property="departments" ofType="com.org.model.Department" column="ID" select="findDeptsByParentid"/>
+        <collection property="users" ofType="com.org.model.User" column="ID" select="findDeptUsers"/>
+    </resultMap>
+    <!-- end 查找所有资讯种类，并将他们映射到对应节点中 -->
+
+    <!--管理员-模糊查询部门-->
+    <select id="searchDeptAndUserByWant" parameterType="com.org.model.Department" resultMap="depts">
+        SELECT * FROM m_department
+        where parentid is null
+        <if test="id!=null and id!=''">
+            AND id = #{id}
+        </if>
+        <if test="partname!=null and partname!=''">
+            AND partname like CONCAT('%',#{partname},'%') <!--连接字符串-->
+        </if>
+        <if test="addr!=null and addr!=''">
+            AND addr like CONCAT('%',#{addr},'%')
+        </if>
+    </select>
+
+</mapper>

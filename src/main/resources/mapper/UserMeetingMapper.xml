@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.org.mapper.UserMeetingMapper">
+
+    <!--更新-->
+    <!--更新用户刷脸签到-->
+    <update id="sign" parameterType="com.org.model.UserMeeting">
+        UPDATE m_user_meeting
+        <set>
+            <if test="startTime == null">
+                start_time = now(),
+            </if>
+            <if test="state == null">
+                STATE = 1
+            </if>
+        </set>
+        where user_id = #{userId} and meeting_id = #{meetingId}
+    </update>
+
+    <!--更新用户参会状态-代签-->
+    <update id="signByAdmin" parameterType="com.org.model.UserMeeting">
+        UPDATE m_user_meeting
+        <set>
+            <if test="startTime == null">
+                start_time = now(),
+            </if>
+            <if test="state == null">
+                STATE = 2
+            </if>
+        </set>
+        where user_id = #{userId} and meeting_id = #{meetingId}
+    </update>
+    <!--更新用户参会状态-取消签到-->
+    <update id="deleteSignByAdmin" parameterType="com.org.model.UserMeeting">
+        UPDATE m_user_meeting
+        <set>
+            <if test="startTime == null">
+                start_time = now(),
+            </if>
+            <if test="state == null">
+                STATE = 0
+            </if>
+        </set>
+        where user_id = #{userId} and meeting_id = #{meetingId}
+    </update>
+
+    <!--delete-->
+    <!--删除旧的关联-->
+    <delete id="deleteOld">
+        DELETE FROM `m_user_meeting`
+        where meeting_id = #{meetingid} AND start_time is null AND um_power != 3
+    </delete>
+    <!--用户、管理员删除-->
+    <delete id="deleteOld2">
+        DELETE FROM `m_user_meeting`
+        where user_id = #{userid} AND deleted = 0
+    </delete>
+    <delete id="deleteOld3">
+        DELETE FROM `m_user_meeting`
+        where user_id = #{userid} AND deleted = 1
+    </delete>
+
+    <!--分页查询单个用户创建或加入的会议-->
+    <select id="searchUserMessage" parameterType="int" resultType="com.org.model.UserMeeting">
+        select * from m_user_meeting
+        WHERE meeting_id = #{meetingid}
+    </select>
+
+</mapper>

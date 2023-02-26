@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.org.mapper.MeetingMapper">
+
+    <resultMap id="meeting1" type="com.org.model.vo.MeetingVO">
+        <result property="id" column="ID"/>
+        <result property="name" column="NAME"/>
+        <result property="host" column="HOST"/>
+        <result property="roomName" column="ROOMNAME"/>
+        <result property="online" column="ONLINE"/>
+        <result property="createTime" column="CREATE_TIME"/>
+        <result property="link" column="LINK"/>
+        <result property="meetingTime" column="MEETING_TIME"/>
+        <result property="signTime" column="SIGN_TIME"/>
+        <result property="introduce" column="INTRODUCE"/>
+        <result property="updateTime" column="UPDATE_TIME"/>
+        <result property="userNumber" column="USER_NUMBER"/>
+        <result property="signNumber" column="SIGN_NUMBER"/>
+        <!--再查找主持人信息-->
+        <association property="host" javaType="string" select="searchHost" column="ID"/>
+        <!--再查找会议室-->
+        <association property="roomName" javaType="string" select="searchRoom" column="ID"/>
+    </resultMap>
+
+    <!--模糊查询单个用户创建或加入的会议-->
+    <select id="searchUserMeetingByWant" parameterType="com.org.model.dto.Meeting1DTO" resultType="com.org.model.vo.MeetingVO">
+        SELECT mm.id, mm.name, room_name, online, mm.create_time, link, mm.introduce,
+        mm.update_time, mm.meeting_time, mm.sign_time, user_number, sign_number, mum.state FROM m_meeting mm
+        JOIN m_meeting_room mmr
+        on mmr.meetingid = mm.id
+        JOIN m_user_meeting mum
+        on mm.id = mum.meeting_id
+        JOIN m_user mu
+        on mum.user_id = mu.id
+        JOIN m_room mr
+        on mr.id = mmr.roomid
+        WHERE
+        mu.ID = #{userid} AND mm.DELETED = 0
+        <if test="meetingname!=null and meetingname!=''">
+            AND mm.name like CONCAT('%',#{meetingname},'%') <!--连接字符串-->
+        </if>
+        <if test="host!=null and host!=''">
+            AND mu.username like CONCAT('%',#{host},'%')
+        </if>
+        <if test="meetingroom!=null and meetingroom!=''">
+            AND mr.room_name = #{meetingroom}
+        </if>
+    </select>
+
+    <!--查询全部会议信息并附带主持人、会议室-->
+    <select id="searchAllMeeting" resultMap="meeting1">
+        select * from m_meeting m
+                          JOIN m_user_meeting um
+                               ON um.MEETING_ID = m.ID
+                          JOIN m_user u
+                               ON  u.ID = um.USER_ID
+        WHERE m.DELETED = 0
+    </select>
+
+    <!--分页查询单个用户创建或加入的会议 已经删掉了，用原始的mapper-->
+    <select id="searchMeetingByPage" parameterType="int" resultType="com.org.model.Meeting">
+        select * from m_meeting m
+            JOIN m_user_meeting um
+        ON um.MEETING_ID = m.ID
+            JOIN m_user u
+            ON  u.ID = um.USER_ID
+        WHERE u.ID = #{id} AND um.DELETED = 0 limit #{start},#{end}
+    </select>
+    <!--查询单个会议的主持人-->
+    <select id="searchHost" parameterType="int" resultType="String">
+        SELECT `username` FROM `m_user` where id = (
+            SELECT `user_id` FROM m_user_meeting
+                where um_power=3 AND meeting_id = #{meetingid}
+            )
+    </select>
+    <!--查询单个会议的会议室-->
+    <select id="searchRoom" parameterType="Integer" resultType="String">
+        SELECT `room_name` FROM `m_room` where id = (
+            SELECT `roomid` FROM m_meeting_room
+            where meetingid = #{id}
+        )
+    </select>
+
+    <!--查询此会议的参会人员参会信息-->
+    <select id="meetingMessage" parameterType="int" resultType="com.org.model.excel.MeetingMessage">
+        SELECT `username`,`nickname`,`sex`,`um_power`,`state`,`start_time`,`end_time`, time_to_sec(timediff(`end_time`,`start_time`)) as `all_time`
+        FROM `m_user_meeting` as um
+            right join `m_user` as u
+                on u.id=um.user_id where um.meeting_id=#{meetingid}
+    </select>
+
+    <!--查找会议中用户的签到成功状态-->
+    <select id="searchUserSateOK" parameterType="int" resultType="com.org.model.vo.Meeting2VO">
+        SELECT u.id, u.username, um.start_time, um.state, u.face_url
+        FROM `m_user_meeting` as um
+                 right join `m_user` as u
+                            on u.id=um.user_id where (um.state=1 OR um.state=2) AND um.meeting_id = #{meetingid}
+    </select>
+    <!--查找会议中用户的签到失败状态-->
+    <select id="searchUserSateNO" parameterType="int" resultType="com.org.model.vo.Meeting2VO">
+        SELECT u.id, u.username, um.start_time, um.state, u.face_url
+        FROM `m_user_meeting` as um
+                 right join `m_user` as u
+                            on u.id=um.user_id where um.state=0 AND um.meeting_id = #{meetingid}
+    </select>
+
+    <!--模糊查找会议中用户的签到成功状态，用haspmap装参数-->
+    <select id="searchUserSateOKByWant" parameterType="hashmap" resultType="com.org.model.vo.Meeting2VO">
+        SELECT u.id, u.username, um.start_time, um.state, u.face_url
+        FROM `m_user_meeting` as um
+        right join `m_user` as u
+        on u.id=um.user_id
+        where um.state!=0 AND um.meeting_id = #{meetingid}
+        <if test="username!=null and username!=''">
+            AND u.username like CONCAT('%',#{username},'%')
+        </if>
+    </select>
+    <!--模糊查找会议中用户的未签到状态，用haspmap装参数-->
+    <select id="searchUserSateNOByWant" parameterType="hashmap" resultType="com.org.model.vo.Meeting2VO">
+        SELECT u.id, u.username, um.start_time, um.state, u.face_url
+        FROM `m_user_meeting` as um
+                 right join `m_user` as u
+                            on u.id=um.user_id
+        where um.state=0 AND um.meeting_id = #{meetingid}
+        <if test="username!=null and username!=''">
+            AND u.username like CONCAT('%',#{username},'%')
+        </if>
+    </select>
+
+    <!--管理员-模糊查询会议-->
+    <select id="searchMeeting" parameterType="com.org.model.dto.Meeting1DTO" resultType="com.org.model.vo.MeetingVO">
+        SELECT mm.id, mm.name, mu.username as host, room_name, online, mm.create_time, link, mm.introduce,
+               mm.update_time, mm.meeting_time, mm.sign_time, user_number, sign_number, state FROM m_meeting mm
+            JOIN m_meeting_room mmr
+                on mmr.meetingid = mm.id
+            JOIN m_user_meeting mum
+                on mm.id = mum.meeting_id
+            JOIN m_user mu
+                on mum.user_id = mu.id
+            JOIN m_room mr
+                on mr.id = mmr.roomid
+        WHERE
+            mum.um_power = 3 AND mm.DELETED = 0                   <!--主持人-->
+        <if test="meetingname!=null and meetingname!=''">
+            AND mm.name like CONCAT('%',#{meetingname},'%') <!--连接字符串-->
+        </if>
+        <if test="host!=null and host!=''">
+            AND mu.username like CONCAT('%',#{host},'%')
+        </if>
+        <if test="meetingroom!=null and meetingroom!=''">
+            AND mr.room_name = #{meetingroom}
+        </if>
+    </select>
+
+    <!--更新-->
+    <!--更新会议信息-->
+    <update id="updateRole" parameterType="com.org.model.Meeting">
+        UPDATE m_meeting
+        <set>
+            <if test="name != null">
+                NAME = #{name}
+            </if>
+            <if test="introduce != null">
+                INTRODUCE = #{introduce}
+            </if>
+            <if test="meeting_time != null">
+                MEETING_TIME = #{meeting_time},
+            </if>
+            <if test="sign_time != null">
+                SIGN_TIME = #{sign_time}
+            </if>
+            <if test="sign_number != 0">
+                SIGN_NUMBER = #{sign_number},
+            </if>
+            <if test="user_number != 0">
+                USER_NUMBER = #{user_number}
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+</mapper>

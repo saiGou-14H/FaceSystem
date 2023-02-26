@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.org.mapper.RoomMapper">
+
+    <resultMap id="RoomAndFacility" type="com.org.model.Room">
+        <id column="ID" property="id"/>
+        <result column="ROOM_NAME" property="roomName"/>
+        <result column="ROOM_ADDR" property="roomAddr"/>
+        <result column="PEOPLES" property="peoples"/>
+        <result column="MEETROOM_STATE" property="meetroomState"/>
+
+        <!--一对多的关联-->
+        <collection property="facilities" ofType="com.org.model.Facility" select="searchFacility" column="ID">
+            <result property="id" column="ID"/>
+            <result property="facilityName" column="FACILITYNAME"/>
+            <result property="facilityState" column="FACILITYSTATE"/>
+            <result property="buyTime" column="BUYTIME"/>
+        </collection>
+    </resultMap>
+
+    <!--管理员-查找全部会议室-->
+    <select id="searchFacility" parameterType="Integer" resultType="com.org.model.Facility">
+        select * from m_facility mf
+                          JOIN m_facility_room mfr
+                               ON mfr.FACILITYID = mf.ID
+                          JOIN m_room mr
+                               ON  mr.ID = mfr.ROOMID
+        WHERE mr.ID = #{id}
+    </select>
+
+    <!--管理员-查找全部会议室-->
+    <select id="searchRoom" resultMap="RoomAndFacility">
+        select * from m_room
+    </select>
+
+    <!--管理员-模糊查询会议室-->
+    <select id="searchRoomByWant" parameterType="com.org.model.Room" resultMap="RoomAndFacility">
+        SELECT * FROM m_room
+        <where>
+            <if test="id!=null and id!=''">
+                AND id = #{id}
+            </if>
+            <if test="roomName!=null and roomName!=''">
+                AND room_name like CONCAT('%',#{roomName},'%') <!--连接字符串-->
+            </if>
+            <if test="roomAddr!=null and roomAddr!=''">
+                AND room_addr like CONCAT('%',#{roomAddr},'%')
+            </if>
+        </where>
+    </select>
+    <!--管理员-查询会议室是否空闲-->
+    <select id="searchFreeRoom" parameterType="com.org.model.dto.RoomDTO" resultType="String">
+        SELECT `meeting_time` FROM m_meeting mm
+            JOIN m_meeting_room mmr
+                ON mmr.meetingid = mm.id
+            JOIN m_room mr
+                ON mr.id = mmr.roomid
+        WHERE mr.room_name = #{roomName} AND mm.DELETED = 0
+    </select>
+
+</mapper>

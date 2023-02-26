@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.org.mapper.MeetingRoomMapper">
+
+    <!--更新-->
+    <!--更新会议与会议室关联-->
+    <update id="updateRole">
+        UPDATE m_meeting
+        <set>
+            <if test="name != null">
+                NAME = #{name}
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+</mapper>

@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.org.mapper.UserMapper">
+
+    <resultMap id="meeting" type="com.org.model.vo.MeetingVO">
+        <result property="id" column="ID"/>
+        <result property="createTime" column="CREATE_TIME"/>
+        <result property="name" column="NAME"/>
+        <result property="link" column="LINK"/>
+        <result property="introduce" column="INTRODUCE"/>
+        <result property="updateTime" column="UPDATE_TIME"/>
+        <result property="meetingTime" column="MEETING_TIME"/>
+        <result property="endTime" column="END_TIME"/>
+        <result property="signNumber" column="SIGN_NUMBER"/>
+        <result property="userNumber" column="USER_NUMBER"/>
+        <result property="state" column="STATE"/>
+        <!--再查找主持人-->
+        <association property="host" javaType="string" select="searchHost" column="ID"/>
+        <!--再查找会议室-->
+        <association property="roomName" javaType="string" select="searchRoom" column="ID"/>
+    </resultMap>
+
+    <resultMap id="UserMap2" type="com.org.model.vo.UserVO">
+        <id column="ID" property="id"/>
+        <result column="EMAIL" property="email"/>
+        <result column="USERNAME" property="username"/>
+        <result column="POWER" property="power"/>
+
+        <!--一对多的关联-->
+        <collection property="menus" ofType="com.org.model.Menu" select="searchAllMenu" column="POWER">
+            <result property="id" column="ID"/>
+            <result property="name" column="NAME"/>
+            <result property="path" column="PATH"/>
+            <result property="icon" column="ICON"/>
+        </collection>
+    </resultMap>
+
+    <resultMap id="UserMap3" type="com.org.model.vo.User2VO">
+        <id column="ID" property="id"/>
+        <result column="EMAIL" property="email"/>
+        <result column="USERNAME" property="username"/>
+        <result column="POWER" property="power"/>
+        <result column="NICKNAME" property="nickname"/>
+        <result column="SEX" property="sex"/>
+        <result column="AGE" property="age"/>
+        <result column="PHONE" property="phone"/>
+        <result column="face_url" property="faceUrl"/>
+        <result column="head_url" property="headUrl"/>
+        <result column="INTRODUCE" property="introduce"/>
+        <result column="IP" property="ip"/>
+
+        <!--一对多的关联-->
+        <collection property="partnames" ofType="String" select="searchUserDepartment" column="ID"/>
+    </resultMap>
+
+    <!--查询所有关联的部门-->
+    <select id="searchUserDepartment" parameterType="Integer" resultType="String">
+        SELECT `partname` FROM m_department md
+                                   JOIN m_user_department mud
+                                        ON mud.departmentid = md.id
+                                   JOIN m_user mu
+                                        ON mu.id = mud.userid
+        where mu.id = #{id}
+    </select>
+
+    <!--查询所有关联的会议-->
+    <select id="searchAllMeeting" parameterType="Integer" resultType="com.org.model.Meeting">
+        select * from m_meeting m
+                          JOIN m_user_meeting um
+                               ON um.MEETING_ID = m.ID
+                          JOIN m_user u
+                               ON  u.ID = um.USER_ID
+        WHERE u.ID = #{id} AND m.DELETED = 0
+    </select>
+
+    <!--查询所有关联的父菜单-->
+    <select id="searchAllMenu" parameterType="String" resultMap="getchildMenus">
+        select * from m_menu m
+                          JOIN m_power_menu pm
+                               ON pm.MENU_ID = m.ID
+                          JOIN m_power p
+                               ON  p.ID = pm.POWER_ID
+        WHERE p.POWER = #{power} and m.parent_id is null
+    </select>
+
+    <!--查询子菜单 children和meta-->
+    <resultMap id="getchildMenus" type="com.org.model.Menu">
+        <id column="ID" property="id"/>
+        <collection property="children" ofType="com.org.model.Menu" select="searchAllChildMenu" column="ID"/>
+        <collection property="meta" ofType="com.org.model.vo.MetaVO" select="searchMenuMetaVO" column="ID"/>
+    </resultMap>
+    <!--查询所有子菜单-->
+    <select id="searchAllChildMenu" resultMap="getchildMenus">    <!--再查一次子，主要是要得到vo-->
+        select * from m_menu
+        WHERE parent_id = #{id}
+    </select>
+    <!--查询所有meta-->
+    <select id="searchMenuMetaVO" resultType="com.org.model.vo.MetaVO">
+        select * from m_menu
+        WHERE id = #{id}
+    </select>
+
+    <!--查询用户的信息-->
+    <select id="searchOneUser" parameterType="int" resultMap="UserMap3">
+        select * from m_user
+        <where>
+            <if test="userid != 0">
+                id = #{userid}
+            </if>
+        </where>
+    </select>
+
+    <!--管理员-模糊查询用户的信息-->
+    <select id="searchAllUserByWant" parameterType="hashmap" resultMap="UserMap3">
+        select * from m_user
+        <where>
+            <if test="email != null">
+                email like CONCAT('%',#{email},'%')
+            </if>
+            <if test="username != null">
+                AND username like CONCAT('%',#{username},'%')
+            </if>
+        </where>
+    </select>
+
+    <!--查询单个用户创建或加入的会议-->
+    <select id="searchUserMeeting" parameterType="int" resultMap="meeting">
+        select * from m_meeting m
+                          JOIN m_user_meeting um
+                               ON um.MEETING_ID = m.ID
+                          JOIN m_user u
+                               ON  u.ID = um.USER_ID
+        WHERE u.ID = #{id} AND m.DELETED = 0
+    </select>
+    <!--查询单个用户的菜单信息-->
+    <select id="searchUserMenu" parameterType="int" resultMap="UserMap2">
+        select * from m_user where id = #{id}
+    </select>
+
+    <!--查询单个会议的主持人-->
+    <select id="searchHost" parameterType="Integer" resultType="String">
+        SELECT `username` FROM `m_user` where id = (
+            SELECT `user_id` FROM m_user_meeting
+            where um_power=3 AND meeting_id = #{id}
+        )
+    </select>
+    <!--查询单个会议的会议室-->
+    <select id="searchRoom" parameterType="Integer" resultType="String">
+        SELECT `room_name` FROM `m_room` where id = (
+            SELECT `roomid` FROM m_meeting_room
+            where meetingid = #{id}
+        )
+    </select>
+
+    <!--更新-->
+    <!--管理员/用户-修改密码-->
+    <update id="updatePassword" parameterType="com.org.model.dto.UserDTO">
+        UPDATE m_user
+        <set>
+            <if test="newpassword != null">
+                PASSWORD = #{newpassword}
+            </if>
+        </set>
+        where email= #{email}
+    </update>
+    <!--管理员-修改用户信息-->
+    <update id="updateUserMes" parameterType="com.org.model.User">
+        UPDATE m_user
+        <set>
+            <if test="email != null">
+                EMAIL = #{email},
+            </if>
+            <if test="username != null">
+                USERNAME = #{username},
+            </if>
+            <if test="power != null">
+                POWER = #{power},
+            </if>
+            <if test="nickname != null">
+                NICKNAME = #{nickname},
+            </if>
+            <if test="sex != null">
+                SEX = #{sex},
+            </if>
+            <if test="age != null">
+                AGE = #{age},
+            </if>
+            <if test="phone != null">
+                PHONE = #{phone},
+            </if>
+            <if test="faceUrl != null">
+                FACE_URL = #{faceUrl},
+            </if>
+            <if test="headUrl != null">
+                HEAD_URL = #{headUrl},
+            </if>
+            <if test="introduce != null">
+                INTRODUCE = #{introduce},
+            </if>
+            <if test="ip != null">
+                IP = #{ip}
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+</mapper>
