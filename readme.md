@@ -14,8 +14,8 @@
 
 ## 相关项目
 
-- 人脸模块[meeting-face](https://github.com/saiGou-14H/meeting-face)
-- 前端模块[retinaface-facenet](https://github.com/saiGou-14H/retinaface-facenet)
+- 人脸模块  [meeting-face](https://github.com/saiGou-14H/meeting-face)
+- 前端模块  [retinaface-facenet](https://github.com/saiGou-14H/retinaface-facenet)
 
 ## 项目简介
 
